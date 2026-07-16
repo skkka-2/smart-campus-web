@@ -1,107 +1,104 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick} from "vue";
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import {
   connectWebSocket,
   sendMessage,
   addMessageListener,
   removeMessageListener,
   getOnlineUsers,
+} from '../websocket';
+import { listChatHistory } from '@/api/ChatPart';
+import { useUserStore } from '@/stores';
+import EmojiPicker from 'vue3-emoji-picker';
+import 'vue3-emoji-picker/css';
 
-} from "../websocket";
-import request from '../util/request';
-import EmojiPicker from "vue3-emoji-picker";
-import "vue3-emoji-picker/css";
+const userStore = useUserStore();
+const userId = computed(() => String(userStore.userID ?? ''));
+const token = computed(() => userStore.token);
 
-const userId = localStorage.getItem("userID"); // 当前用户 ID
+// ⚠️ receiverId / onlineUsers 用 .value 更新,不能直接赋值(丢失响应式)
+const receiverIds = ref([]);
+const onlineUsers = ref([]);
 
-let receiverId=ref(''); // 示例目标用户 ID
-let onlineUsers = ref([])
+const messages = ref([]);
+const inputMessage = ref('');
+const chatWindow = ref(null);
 
-const messages = ref([]); // 聊天消息数组
-const inputMessage = ref(""); // 用户输入消息
-const chatWindow = ref(null); // 聊天窗口 DOM 引用
-
-//收到消息
+/** 收到消息 */
 const onMessageReceived = (msg) => {
-  if (msg.type !== 'onlineUsers') {
-    messages.value.push(msg);
+  if (msg.type === 'onlineUsers') {
+    onlineUsers.value = msg.users || [];
+    receiverIds.value = onlineUsers.value.filter((id) => String(id) !== userId.value);
+    return;
   }
-  receiverId = getOnlineUsers().filter(id => id !== userId);
-  onlineUsers = getOnlineUsers();
+  messages.value.push(msg);
   scrollToBottom();
 };
 
-const fetchOnlineUsers = () => {
-  onlineUsers = getOnlineUsers();
+const refreshOnlineUsers = () => {
+  onlineUsers.value = getOnlineUsers();
+  receiverIds.value = onlineUsers.value.filter((id) => String(id) !== userId.value);
 };
 
-//获取聊天记录
-const chatRoomHistory = async () => {
+/** 获取聊天记录 */
+const loadHistory = async () => {
   try {
-    const response = await request.get('/mainPart/chatRoomHistory');
-    messages.value = response.data;
+    const data = await listChatHistory({ limit: 20 });
+    // 后端返回 { items: [{ sender_id, receiver_id, content, created_at }] }
+    messages.value = (data?.items || []).map((m) => ({
+      senderId: m.sender_id,
+      content: m.content,
+      created_at: m.created_at,
+    }));
+    await nextTick();
     scrollToBottom();
-  } catch (error) {
-    console.error('无法加载历史消息', error);
+  } catch (err) {
+    console.error('[ChatRoom] load history failed:', err);
   }
 };
 
-// 初始化 WebSocket 连接
-onMounted(() => {
-  connectWebSocket(userId);
-  fetchOnlineUsers();
-  chatRoomHistory();
+onMounted(async () => {
+  connectWebSocket(userId.value, token.value);
   addMessageListener(onMessageReceived);
+  await loadHistory();
+  refreshOnlineUsers();
 });
 
 onUnmounted(() => {
   removeMessageListener(onMessageReceived);
 });
 
-// 发送消息
-const send = async() => {
-  if (inputMessage.value.trim() === "") return;
-
-  // 通过 WebSocket 发送消息
-  sendMessage(userId, receiverId, inputMessage.value);
-  // 将消息添加到消息列表
+/** 发送消息 */
+const send = async () => {
+  if (!inputMessage.value.trim()) return;
+  sendMessage(userId.value, receiverIds.value, inputMessage.value);
   messages.value.push({
-    senderId: userId,
-    receiverId: receiverId,
+    senderId: userId.value,
     content: inputMessage.value,
-    created_at:new Date().toISOString().slice(0, 19).replace('T', ' '),
+    created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
   });
+  inputMessage.value = '';
   await nextTick();
   scrollToBottom();
-
-  inputMessage.value = ""; // 清空输入框
 };
 
-// 滚动到底部函数
 const scrollToBottom = () => {
-  if (chatWindow.value) {
-    chatWindow.value.scrollTop = chatWindow.value.scrollHeight;
-  }
+  if (chatWindow.value) chatWindow.value.scrollTop = chatWindow.value.scrollHeight;
 };
+
 const inputRef = ref(null);
-//emoji
 const showEmojiPicker = ref(false);
 const toggleEmojiPicker = () => {
-  showEmojiPicker.value = !showEmojiPicker.value; // 切换选择器显示状态
+  showEmojiPicker.value = !showEmojiPicker.value;
 };
-//更新焦点位置
+
 const onVue3EmojiPicker = (emoji) => {
-  const input = document.querySelector(".input-box input"); // 获取输入框 DOM
-
-
-  const selectionStart = input.selectionStart; // 获取当前光标位置
+  const input = document.querySelector('.input-box input');
+  if (!input) return;
+  const selectionStart = input.selectionStart;
   const selectionEnd = input.selectionEnd;
-
-  // 插入表情到光标位置
   inputMessage.value =
-    inputMessage.value.slice(0, selectionStart) +emoji.i +inputMessage.value.slice(selectionEnd);
-
-  // 更新光标位置到表情后面
+    inputMessage.value.slice(0, selectionStart) + emoji.i + inputMessage.value.slice(selectionEnd);
   nextTick(() => {
     input.setSelectionRange(selectionStart + emoji.i.length, selectionStart + emoji.i.length);
     input.focus();
@@ -109,8 +106,8 @@ const onVue3EmojiPicker = (emoji) => {
 };
 
 const close = () => {
-  showEmojiPicker.value = false
-}
+  showEmojiPicker.value = false;
+};
 </script>
 
 <template>

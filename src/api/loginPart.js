@@ -1,9 +1,17 @@
-import request from "../util/request";
+import request from '../util/request';
 
-export const login = (username, password) => {
-  return request.post('/user/login', { username, password })
-}
+/**
+ * 登录
+ * @returns {Promise<{ token: string, user: { id, username } }>}
+ */
+export const login = (username, password) =>
+  request.post('/api/users/login', { username, password });
 
-export const register = (username, phone, password) => {
-  return request.post('/user/register', { username, phone, password })
-}
+/**
+ * 注册
+ */
+export const register = (username, phone, password) =>
+  request.post('/api/users/register', { username, phone, password });
+
+/** 当前登录用户 */
+export const getMe = () => request.get('/api/users/me');

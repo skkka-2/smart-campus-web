@@ -11,57 +11,44 @@
 import { onMounted, ref } from 'vue';
 import wangEditor from 'wangeditor';
 import { marked } from 'marked';
+import { ElMessage } from 'element-plus';
 import { upload } from '../api/CreatPart';
 
 const editorContainer = ref(null);
 const previewHtml = ref('');
 let editor = null;
-const mdMode = ref(false); // 状态变量，判断是否为 Markdown 模式
+const mdMode = ref(false);
 
 onMounted(() => {
-  // 初始化编辑器
   editor = new wangEditor(editorContainer.value);
-
-  // 开启全屏模式
   editor.config.fullScreen = true;
 
-  // 设置 onChange 事件
   editor.config.onchange = () => {
-    let content = editor.txt.html(); // 获取编辑器的 HTML 内容
+    const content = editor.txt.html();
     if (mdMode.value) {
-      // content = editor.txt.text()
-      //将空段落转换为两个换行符并提取段落内容
-      const markdownContent = content.replace(/<p>(.*?)<\/p>/g, '$1\n\n').replace(/<br\s*\/?>/g, '\n')
-      previewHtml.value = marked(markdownContent); // 将 Markdown 转换为 HTML
+      const markdownContent = content
+        .replace(/<p>(.*?)<\/p>/g, '$1\n\n')
+        .replace(/<br\s*\/?>/g, '\n');
+      previewHtml.value = marked.parse(markdownContent);
     } else {
       previewHtml.value = content;
     }
   };
 
-  editor.config.onCreated = () => {
-    console.log('编辑器创建完成');
-  };
-
-  // 初始化并渲染
   editor.create();
 });
 
 // 上传文章
 const uploadArticle = async () => {
-  const content = editor.txt.html(); // 获取编辑器的 HTML 内容
-  const markdownContent = mdMode.value ? content.replace(/<[^>]+>/g, '') : content; // 提取纯文本内容
-  const htmlContent = marked(markdownContent); // 将 Markdown 转换为 HTML
+  const content = editor.txt.html();
+  const markdownContent = mdMode.value ? content.replace(/<[^>]+>/g, '') : content;
+  const htmlContent = marked.parse(markdownContent);
 
   try {
-    const response = await upload({ content: htmlContent }); // 将内容发送到服务器
-    if (response.status === 200) {
-      alert('上传成功');
-      console.log('上传成功:', response.data);
-    } else {
-      console.error('上传失败:', response.statusText);
-    }
-  } catch (error) {
-    console.error('网络错误:', error);
+    await upload({ content: htmlContent });
+    ElMessage.success('发布成功');
+  } catch (err) {
+    console.error('[Create] upload failed:', err);
   }
 };
 

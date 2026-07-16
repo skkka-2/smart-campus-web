@@ -1,173 +1,141 @@
 <script setup>
-  import log from '../assets/log.svg'
-  import reg from '../assets/register.svg'
-  import { ref} from "vue"
-import { login,register} from '../api/loginPart'
+import log from '../assets/log.svg';
+import reg from '../assets/register.svg';
+import { ref } from 'vue';
+import { login, register } from '../api/loginPart';
+import { useRouter, useRoute } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { useUserStore } from '../stores';
 
-  import{ useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { useUserStore } from '../stores'
+const userStore = useUserStore();
+const router = useRouter();
+const route = useRoute();
+const loginLoading = ref(false);
+const signUploading = ref(false);
+const loginRef = ref(null);
+const signUpRef = ref(null);
 
-  const {setToken, setID} = useUserStore()
-  const router = useRouter()
-  const loginLoading = ref(false);
-  const signUploading = ref(false);
-  const loginRef = ref(null);
-  const signUpRef = ref(null);
+const loginForm = ref({
+  username: '',
+  password: '',
+});
 
-  const loginForm = ref({
-    username: "",
-    password: "",
-  });
+const signUpForm = ref({
+  username: '',
+  phone: '',
+  password: '',
+  confirmpassword: '',
+});
 
-  const signUpForm = ref({
-    username: "",
-    phone: "",
-    password: "",
-    confirmpassword: "",
-  });
+const loginRules = {
+  username: [
+    {
+      required: true,
+      message: '请输入账号/手机号',
+      pattern: /^[a-zA-Z0-9_]{2,16}$/ || /^1[3-9]\d{9}$/,
+      type: 'string',
+      trigger: 'blur',
+    },
+  ],
+  password: [
+    { required: true, message: '请输入密码', type: 'string', trigger: 'blur' },
+  ],
+};
 
-  const loginRules = {
-    username: [
-      {
-        required: true,
-        message: "请输入账号/手机号",
-        pattern: /^[a-zA-Z0-9_]{2,16}$/||/^1[3-9]\d{9}$/,
-        type: "string",
-        trigger: "blur",
-      },
-    ],
-    password: [
-      {
-        required: true,
-        message: "请输入密码",
-        type: "string",
-        trigger: "blur",
-      },
-    ],
-  };
-
-  const signUpRules = {
-    username: [
-      {
-        required: true,
-        pattern: /^[a-zA-Z0-9_]{4,16}$/,
-        message: "请输入账号",
-        type: "string",
-        trigger: "blur",
-      },
-    ],
-    phone: [
-      {
-        required: true,
-        pattern: /^1[3-9]\d{9}$/,
-        message: "请输入11位手机号",
-        type: "string",
-        trigger: "blur",
-      },
-    ],
-    password: [
-      {
-        required: true,
-        message: "请输入密码",
-        type: "string",
-        trigger: "blur",
-      },
-    ],
-    confirmpassword: [
-      {
-        validator: (rule, value, callback) => {
-          if (value === "") {
-            callback(new Error("请再次输入密码"));
-          } else if (value !== signUpForm.value.password) {
-            callback(new Error("两次输入密码不一致!"));
-          } else {
-            callback();
-          }
-        },
-        type: "string",
-        trigger: "blur",
-      },
-    ],
-  };
-
-  const toggleSignMode = (mode) => {
-    const container = document.querySelector(".container");
-    if (mode === "sign-up") {
-      container.classList.add("sign-up-mode");
-    } else {
-      container.classList.remove("sign-up-mode");
-    }
-  };
-
-  const Login =async () => {
-    loginRef.value.validate(async(valid) => {
-      if (valid) {
-        loginLoading.value = true;
-        //在验证通过后显示加载状态，在用户点击登录按钮后显示加载动画或禁用按钮，避免重复提交。
-        // TODO: axios 登录请求
-        try {
-          const res = await login(loginForm.value.username, loginForm.value.password)
-
-          const token = res.data.token
-          const userID = res.data.userid
-          console.log(res.data);
-          
-        setID(userID)
-        setToken(token)
-          ElMessage.success("登录成功")
-          router.push('/')
-          //结束加载动画或禁用按钮
-          loginLoading.value = false
-        } catch (error) {
-          ElMessage.error('登录失败,请重试!');
-          loginLoading.value=false
-          // setTimeout(router.push('/login'),1000)
+const signUpRules = {
+  username: [
+    {
+      required: true,
+      pattern: /^[a-zA-Z0-9_]{4,16}$/,
+      message: '请输入账号(4-16位字母数字下划线)',
+      type: 'string',
+      trigger: 'blur',
+    },
+  ],
+  phone: [
+    {
+      required: true,
+      pattern: /^1[3-9]\d{9}$/,
+      message: '请输入11位手机号',
+      type: 'string',
+      trigger: 'blur',
+    },
+  ],
+  password: [
+    { required: true, message: '请输入密码', type: 'string', trigger: 'blur' },
+  ],
+  confirmpassword: [
+    {
+      validator: (rule, value, callback) => {
+        if (value === '') {
+          callback(new Error('请再次输入密码'));
+        } else if (value !== signUpForm.value.password) {
+          callback(new Error('两次输入密码不一致!'));
+        } else {
+          callback();
         }
-      }
-    });
-  };
+      },
+      type: 'string',
+      trigger: 'blur',
+    },
+  ],
+};
 
-  const SignUp = async() => {
-    signUpRef.value.validate(async (valid) => {
-      if (valid) {
-        signUploading.value = true;
-        // TODO: axios 注册请求
-        // console.log(signUpForm.value);
-        
-        
-        // console.log(res);
-        
-        // axios.post('/api/register',signUpForm.value)
-        //   .then(response =>{
-        //     ElMessage.success("注册成功");
-        //     signUpRef.value.resetFields();
-        //     toggleSignMode("sign-in"); // 切换到登录模式
-        //   })
-        //   .catch(error =>{
-        //     ElMessage.error("注册失败：" + error.response.data.message);
-        //   })
-        
-          try {
-            await register(signUpForm.value.username, signUpForm.value.phone, signUpForm.value.password)
-            ElMessage.success("注册成功");
-          signUpRef.value.resetFields();
-          toggleSignMode("sign-in"); // 切换到登录模式
-          } catch (err) {
-            ElMessage.error('注册失败,请重试!')
-          } finally {
-             signUploading.value = false;
-          }
-          
-        
-      }
-    });
-   
-  };
+const toggleSignMode = (mode) => {
+  const container = document.querySelector('.container');
+  if (mode === 'sign-up') {
+    container.classList.add('sign-up-mode');
+  } else {
+    container.classList.remove('sign-up-mode');
+  }
+};
+
+const Login = async () => {
+  loginRef.value.validate(async (valid) => {
+    if (!valid) return;
+    loginLoading.value = true;
+    try {
+      // 新响应格式:request 已 unwrap 出 { token, user }
+      const { token, user } = await login(
+        loginForm.value.username,
+        loginForm.value.password,
+      );
+      userStore.setSession({ token, user });
+      ElMessage.success('登录成功');
+      const redirect = route.query.redirect || '/';
+      router.push(redirect);
+    } catch (error) {
+      // request 拦截器已 toast,不重复
+    } finally {
+      loginLoading.value = false;
+    }
+  });
+};
+
+const SignUp = async () => {
+  signUpRef.value.validate(async (valid) => {
+    if (!valid) return;
+    signUploading.value = true;
+    try {
+      await register(
+        signUpForm.value.username,
+        signUpForm.value.phone,
+        signUpForm.value.password,
+      );
+      ElMessage.success('注册成功,请登录');
+      signUpRef.value.resetFields();
+      toggleSignMode('sign-in');
+    } catch (err) {
+      // request 拦截器已 toast
+    } finally {
+      signUploading.value = false;
+    }
+  });
+};
 </script>
 
 <template>
-  <div class="container" id="app">
+  <div class="container login-page">
     <div class="forms-container">
       <div class="signin-signup">
         <!-- 登录表单 -->

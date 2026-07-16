@@ -1,95 +1,68 @@
 <script setup>
-import { ref,onMounted } from 'vue';
-import { ai,getChatHistory,clearChatHistory } from '../api/AiPart'
+import { ref, onMounted } from 'vue';
+import { ai, getChatHistory, clearChatHistory } from '../api/AiPart';
 
 const inputText = ref('');
 const messages = ref([]);
 const isSending = ref(false);
-const isLoading = ref(false)
-const userID = localStorage.getItem('userID');
 
-//加载历史记录函数
-const loadChatHistory = async (userID) => {
+/** 后端从 JWT 里解析 userId,前端不需要再传 */
+
+const loadChatHistory = async () => {
   try {
-    const response = await getChatHistory({userID});
-    if (response.status === 200) {
-      messages.value = response.data.messages || []; // 设置消息记录
-      console.log(response.data.messages);
-      console.log(messages.value);
-      
-    }
-  } catch (error) {
-    console.error('加载聊天记录错误:', error);
+    const data = await getChatHistory();
+    // 后端返回 { items: [{ id, user_id, type, text, timestamp }] }
+    messages.value = (data?.items || []).map((m) => ({
+      type: m.type,
+      text: m.text,
+    }));
+  } catch (err) {
+    console.error('[AiPart] load history failed:', err);
   }
 };
 
 //霓虹灯
-const text = ref('小智为你答疑解惑'); // 初始文本
-const characters = ref(text.value.split('')); // 存储分割后的字符
-const checkedItems = ref(new Array(characters.value.length).fill(false)); // 用于存储复选框的状态
-  
+const text = ref('小智为你答疑解惑');
+const characters = ref(text.value.split(''));
+const checkedItems = ref(new Array(characters.value.length).fill(false));
+
 const toggleGlow = (index) => {
-  checkedItems.value[index] = !checkedItems.value[index]; // 切换复选框状态
+  checkedItems.value[index] = !checkedItems.value[index];
 };
 
-//加载历史记录函数调用
 onMounted(() => {
-  // const userID = localStorage.getItem('userID');
-  loadChatHistory(userID);
+  loadChatHistory();
 });
 
-//发送ai请求
+//发送 AI 请求
 const sendMessage = async () => {
   const value = inputText.value.trim();
-  if (value === '') return;
-  console.log(messages.value);
-  
-  if (!Array.isArray(messages.value)) {
-    console.error('messages.value 不是数组！');
-    return;
-  }
+  if (!value) return;
 
   messages.value.push({ type: 'user', text: value });
   inputText.value = '';
   isSending.value = true;
 
   try {
-    // const userID=localStorage.getItem('userID')
-    const response = await ai({ content: value,userID });
-
-    // 检查响应是否正常
-    if (response.status !== 200) { // Axios 中的状态码在 response 对象中
-      const errorData = response.data;
-      messages.value.push({ type: 'ai', text: errorData.error || '服务器错误，请稍后重试！' });
-      //错误时用户、ai信息不保存
-      // await saveMessage(userID, 'ai', aiErrorMessage); // 保存错误消息
-      return;
-    }
-
-    // 直接从响应中提取数据
-    // const aiMessage = response.data.res.choices[0].message.content;
-    const aiMessage=response.data.res
-    messages.value.push({ type: 'ai', text: aiMessage });
-  } catch (error) {
-    console.error('请求错误:', error); // 输出错误信息到控制台
-    messages.value.push({ type: 'ai', text: '对不起，无法访问服务器' });
+    const data = await ai({ content: value });
+    messages.value.push({ type: 'ai', text: data?.reply || '(AI 无响应)' });
+  } catch (err) {
+    console.error('[AiPart] ai failed:', err);
+    messages.value.push({ type: 'ai', text: '对不起,无法访问服务器' });
   } finally {
     isSending.value = false;
   }
 };
 
 //清除聊天记录
-const clear = async() => {
-  // isLoading=true;
+const clear = async () => {
   try {
-    await clearChatHistory({userID});
-    messages.value=[];
-  }catch {
-    console.error('清除聊天记录错误:', error);
-  } finally {
-    // isLoading.value=false;
+    await clearChatHistory();
+    messages.value = [];
+  } catch (err) {
+    console.error('[AiPart] clear failed:', err);
   }
-}
+};
 </script>
 <template>
   <div class="title">

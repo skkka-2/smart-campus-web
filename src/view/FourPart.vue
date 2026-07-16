@@ -1,89 +1,80 @@
 <script setup>
-import pc from '../assets/ban1.png'
-import { useRouter } from 'vue-router'
-import { ref, onMounted, onBeforeUnmount,} from 'vue';
+import pc from '../assets/ban1.png';
+import { useRouter } from 'vue-router';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useUserStore } from '@/stores';
+import { throttle } from '@/composables/useDebounce';
 
-const router = useRouter(); 
-const showChatBox = ref(false); // 控制聊天框的显示
-const userId = localStorage.getItem('userID'); // 当前用户 ID
-// const receiverId = 2; // 目标用户 ID
+const router = useRouter();
+const userStore = useUserStore();
+const showChatBox = ref(false);
 
 const messages = ref([]);
-const userMessage = ref('')
-const teacherMessages = [{
-  from: 'teacher',
-  text: '你好呀同学',
-  avatar: '/avatars/2.png'
-}, {
-  from: 'teacher',
-  text: '我是大学智航站的助教欣欣老师，你有什么学习上的问题都可以咨询我哦',
-  avatar: '/avatars/2.png'
-}, {
-  from: 'teacher',
-  text:'也可以点击进入聊天室，会有专门的专家和老师们为你答疑解惑，规划学习路线哟~',
-  avatar:'/avatars/2.png'
-  }]
+const userMessage = ref('');
+const teacherMessages = [
+  { from: 'teacher', text: '你好呀同学', avatar: '/avatars/2.png' },
+  { from: 'teacher', text: '我是大学智航站的助教欣欣老师,你有什么学习上的问题都可以咨询我哦', avatar: '/avatars/2.png' },
+  { from: 'teacher', text: '也可以点击进入聊天室,会有专门的专家和老师们为你答疑解惑,规划学习路线哟~', avatar: '/avatars/2.png' },
+];
 
-  let messageIndex = 0
-  const intervalId = setInterval(() => {
-    if (messageIndex < teacherMessages.length) {
-      messages.value.push(teacherMessages[messageIndex]);
-      messageIndex++;
-    } else {
-      
-      clearInterval(intervalId); // 停止定时器
-    }
-  }, 1000); // 每秒推送一条消息
+let messageIndex = 0;
+let teacherInterval = null;
 
-const handleClick = ()=>{
-  router.push({ path: `/ChatRoom` });
-}
-//点击咨询
+const handleClick = () => {
+  router.push({ path: '/ChatRoom' });
+};
+
 const handleConsult = (text) => {
-  userMessage.value = text;  // 将咨询文字填入输入框
-  showChatBox.value = true;  // 显示聊天框
-  send()
+  userMessage.value = text;
+  showChatBox.value = true;
+  send();
   setTimeout(() => {
     messages.value.push({
       from: 'teacher',
-      text: '抓住机会多投简历，准备充分，面试稳扎稳打~',
-      avatar: '/avatars/2.png'
+      text: '抓住机会多投简历,准备充分,面试稳扎稳打~',
+      avatar: '/avatars/2.png',
     });
   }, 1000);
-  // messages.value.push({ from: 'teacher',text:'抓住机会多投简历，准备充分，面试稳扎稳打。',avatar:'/avatars/2.png'})
 };
 
-//发送消息
 const send = async () => {
-  messages.value.push({
-    from: 'user',
-    text: userMessage.value,
-    avatar:`/avatars/${userId}.png`
-  })
-  userMessage.value=''
-}
-
-
-const handleScroll = () => {
-      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-      const clientHeight = document.documentElement.clientHeight;
-
-      // 判断是否到达底部
-      if (scrollTop + clientHeight >= scrollHeight - 10) {
-        showChatBox.value = true;
-      }
+  const avatar = userStore.userID ? `/avatars/${userStore.userID}.png` : '/avatars/2.png';
+  messages.value.push({ from: 'user', text: userMessage.value, avatar });
+  userMessage.value = '';
 };
-     // 添加滚动监听器
-    onMounted(() => {
-      window.addEventListener("scroll", handleScroll);
-    });
 
-    // 移除滚动监听器
-    onBeforeUnmount(() => {
-      window.removeEventListener("scroll", handleScroll);
-    });
+// scroll 监听 + 清理
+const handleScroll = throttle(() => {
+  const scrollTop = document.documentElement.scrollTop;
+  const scrollHeight = document.documentElement.scrollHeight;
+  const clientHeight = document.documentElement.clientHeight;
+  if (scrollTop + clientHeight >= scrollHeight - 10) {
+    showChatBox.value = true;
+  }
+}, 200);
 
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true });
+
+  // 老师欢迎语,推完就清定时器
+  teacherInterval = setInterval(() => {
+    if (messageIndex < teacherMessages.length) {
+      messages.value.push(teacherMessages[messageIndex]);
+      messageIndex += 1;
+    } else if (teacherInterval) {
+      clearInterval(teacherInterval);
+      teacherInterval = null;
+    }
+  }, 1000);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll);
+  if (teacherInterval) {
+    clearInterval(teacherInterval);
+    teacherInterval = null;
+  }
+});
 </script>
 
 <template>

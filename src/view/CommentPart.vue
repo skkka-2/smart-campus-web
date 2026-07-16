@@ -1,62 +1,32 @@
 <script setup>
-import { ref, reactive,onMounted } from 'vue'
-import comment from '../components/comment.vue'
-import { commentAcquire } from '../api/CommentPart'
-// import Twikoo from 'twikoo';
+import { ref, onMounted } from 'vue';
+import CommentItem from '@/components/CommentItem.vue';
+import { commentAcquire } from '../api/CommentPart';
+import { useScroll } from '@/composables/useScroll';
 
-// 定义响应式状态
 const commentData = ref([]);
-const error = ref(null);
+const loading = ref(true);
+const isFixed = ref(false);
 
-// const commentData = ref([
-//   { id: 1, time: Date.now(), userName: '用户1', like: 10, content: '评论内容1' },
-//   { id: 2, time: Date.now(), userName: '用户2', like: 5, content: '评论内容2' }
-// ]);
-
-// 使用 onMounted 钩子
 onMounted(async () => {
   try {
-    const response = await commentAcquire({userName: 'aq1'}); // 调用 API 请求
-    commentData.value = response.data; // 更新数据列表
-    // console.log(commentData.value[0].time);
+    // Phase 3 会重新设计评论接口;当前保留旧行为
+    const list = await commentAcquire({ userName: 'aq1' });
+    commentData.value = Array.isArray(list) ? list : [];
   } catch (err) {
-    error.value = '获取数据失败: ' + err.message; // 处理错误
+    console.error('[CommentPart] fetch failed:', err);
+  } finally {
+    loading.value = false;
   }
 });
 
+// useScroll 自带清理,不会泄漏
+useScroll(({ scrollTop }) => {
+  isFixed.value = scrollTop > 300;
+});
 
-// onMounted(() => {
-//   // 监听新增评论（假设是通过 WebSocket）
-//   const socket = new WebSocket('wss://example.com/comments');
-
-//   socket.onmessage = (event) => {
-//     const newComment = JSON.parse(event.data);
-//     commentData.value.push(newComment); // 仅添加新评论
-//   };
-
-//   // 获取初始评论列表
-//   commentAcquire().then(response => {
-//     commentData.value = response.data;
-//   });
-// });
-console.log(Date.now());
-
-
-
-//nav固定
-const isFixed=ref(false)
-addEventListener('scroll',()=>{
-    const scrollTop = document.documentElement.scrollTop
-    if(scrollTop>300){
-        isFixed.value=true
-    }else {
-        isFixed.value=false
-    }
-})
-
-
-//评论tab跳转
-const selectLight = ref(0)
+//评论 tab
+const selectLight = ref(0);
 </script>
 
 <template>
@@ -67,7 +37,7 @@ const selectLight = ref(0)
             <span class="two" :class="{'light':selectLight==1}" @click="selectLight=1">最新</span>
         </div>
         <div class="content" >
-            <comment class="comment" v-for="(item,index) in commentData" :key="item.id" :time="item.time" :userName="item.userName" :like="item.like" :content="item.content" ></comment>
+            <CommentItem class="comment" v-for="(item, index) in commentData" :key="item.id ?? index" :time="item.time" :userName="item.userName" :like="item.like" :content="item.content" />
         </div>
     </el-col>
     <el-col :lg="4" class="right-col">
