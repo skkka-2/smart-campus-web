@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElSkeleton, ElAvatar, ElInput, ElButton } from 'element-plus';
+import { ElMessage, ElSkeleton, ElInput, ElButton } from 'element-plus';
+import AvatarWithFallback from '@/components/AvatarWithFallback.vue';
 import {
   getArticleDetail,
   toggleLike,
@@ -102,7 +103,7 @@ onMounted(loadAll);
         </div>
         <h1 class="title">{{ article.title }}</h1>
         <div class="meta">
-          <el-avatar :size="32">{{ (article.author_name || '?').slice(0, 1) }}</el-avatar>
+          <AvatarWithFallback :name="article.author_name" :user-id="article.author_id" :size="32" />
           <span class="author">{{ article.author_name || '匿名作者' }}</span>
           <span class="dot">·</span>
           <span>{{ timeAgo }}</span>
@@ -150,7 +151,7 @@ onMounted(loadAll);
 
         <ul v-if="comments.length" class="comment-list">
           <li v-for="c in comments" :key="c.id" class="comment">
-            <el-avatar :size="36">{{ (c.userName || '?').slice(0, 1) }}</el-avatar>
+            <AvatarWithFallback :name="c.userName" :user-id="c.user_id" :size="36" />
             <div class="comment-body">
               <div class="comment-head">
                 <span class="comment-user">{{ c.userName }}</span>

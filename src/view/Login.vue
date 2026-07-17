@@ -32,7 +32,7 @@ const loginRules = {
     {
       required: true,
       message: '请输入账号/手机号',
-      pattern: /^[a-zA-Z0-9_]{2,16}$/ || /^1[3-9]\d{9}$/,
+      pattern: /^([a-zA-Z0-9_]{2,16}|1[3-9]\d{9})$/,
       type: 'string',
       trigger: 'blur',
     },

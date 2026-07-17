@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { ElAvatar } from 'element-plus';
+import AvatarWithFallback from './AvatarWithFallback.vue';
 import { useTimeAgo } from '@/composables/useTimeAgo';
 
 const props = defineProps({
@@ -16,14 +16,12 @@ const timeMs = computed(() => {
   return Number.isFinite(n) ? n : Date.now();
 });
 const timeAgo = useTimeAgo(timeMs);
-
-const initial = computed(() => (props.userName || '?').slice(0, 1));
 </script>
 
 <template>
   <article class="comment-item">
     <div class="header">
-      <el-avatar :src="avatar" :size="40">{{ initial }}</el-avatar>
+      <AvatarWithFallback :src="avatar" :name="userName" :size="40" />
       <div class="header-info">
         <div class="name">{{ userName }}</div>
         <div class="time">{{ timeAgo }}</div>

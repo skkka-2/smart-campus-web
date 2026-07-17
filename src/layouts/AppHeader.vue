@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElAvatar, ElDialog, ElButton } from 'element-plus';
+import { ElDialog, ElButton } from 'element-plus';
 import { useAuth } from '@/composables/useAuth';
 import SearchBar from './SearchBar.vue';
+import AvatarWithFallback from '@/components/AvatarWithFallback.vue';
 import Logo from '@/assets/Logo.png';
 
 const props = defineProps({
@@ -12,7 +13,7 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const { isLogin, userID, logout } = useAuth();
+const { isLogin, userID, username, logout } = useAuth();
 
 const searchValue = ref('');
 const suggestions = ref([
@@ -38,10 +39,6 @@ async function confirmLogout() {
 function onSearch(item) {
   console.log('[search]', item);
 }
-
-const avatarUrl = computed(() =>
-  userID.value ? `/avatars/${userID.value}.png` : null,
-);
 </script>
 
 <template>
@@ -73,14 +70,9 @@ const avatarUrl = computed(() =>
         <button v-if="isLogin" class="btn-create" @click="goCreate">创作者中心</button>
 
         <template v-if="isLogin">
-          <el-avatar
-            class="user-avatar"
-            :src="avatarUrl"
-            :size="36"
-            @click="showLogoutDialog = true"
-          >
-            {{ (userID ?? '?').toString().slice(0, 1) }}
-          </el-avatar>
+          <div class="avatar-wrap" @click="showLogoutDialog = true">
+            <AvatarWithFallback :user-id="userID" :name="username" :size="36" />
+          </div>
         </template>
         <button v-else class="btn-login" @click="goLogin">登录</button>
       </div>
@@ -197,10 +189,8 @@ const avatarUrl = computed(() =>
   background: var(--color-border);
 }
 
-.user-avatar {
+.user-avatar,
+.avatar-wrap {
   cursor: pointer;
-  background: var(--color-primary);
-  color: #fff;
-  font-weight: 600;
 }
 </style>

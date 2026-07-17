@@ -1,94 +1,41 @@
-// import { fileURLToPath, URL } from 'node:url'
-
-// import { defineConfig } from 'vite'
-// import AutoImport from 'unplugin-auto-import/vite'
-// import Components from 'unplugin-vue-components/vite'
-// import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-// import vue from '@vitejs/plugin-vue'
-// import ElementPlus from 'unplugin-element-plus/vite'
-// import { createRequire } from 'module';
-// const require = createRequire(import.meta.url);
-// const sassEmbedded = require('sass-embedded');
-
-// // https://vitejs.dev/config/
-// export default defineConfig({
-//   // base:'/@view/',
-//   plugins: [
-//     ElementPlus({ useSource: true }),
-//     AutoImport({
-//       resolvers: [ElementPlusResolver()],
-//     }),
-//     Components({
-//       //配置elementPlus采用sass样式配色系统
-//       resolvers: [ElementPlusResolver()],
-//     }),
-//     vue(),
-//     {
-//       name: 'vite-plugin-sass-embedded',
-//       config: () => {
-//         return {
-//           css: {
-//             preprocessorOptions: {
-//               scss: {
-//                 additionalData: '@use "element-plus/theme-chalk/style/element/index.scss" as *;',
-//                 // 设置为现代 API
-//                 // api: 'modern',
-//               },
-//             },
-//           },
-//         };
-//       },
-//     },
-//   ],
-//   resolve: {
-//     alias: {
-//       '@': fileURLToPath(new URL('./src', import.meta.url))
-//     }
-//   },
-// })
-
-
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import vue from '@vitejs/plugin-vue';
 import ElementPlus from 'unplugin-element-plus/vite';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const sassEmbedded = require('sass-embedded');
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    ElementPlus({ useSource: true }),
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-    }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-    }),
-    {
-      name: 'vite-plugin-sass-embedded',
-      config: () => {
-        return {
-          css: {
-            preprocessorOptions: {
-              scss: {
-                 additionalData: '$injectedColor: red;', // 确保路径正确
-              },
-            },
-          },
-        };
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiTarget = env.VITE_PROXY_TARGET || 'http://127.0.0.1:3007';
+
+  return {
+    plugins: [
+      vue(),
+      ElementPlus({ useSource: true }),
+      AutoImport({ resolvers: [ElementPlusResolver()] }),
+      Components({ resolvers: [ElementPlusResolver()] }),
+    ],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    server: {
+      port: 5173,
+      /**
+       * dev 时 /api/* 走代理到后端,避免 CORS
+       * WebSocket 单独 ws:true
+       * 若你想直连后端不走代理,把 .env 里 VITE_BASE_API 改成完整 URL 即可
+       */
+      proxy: {
+        '/api': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+      },
     },
-  },
+  };
 });

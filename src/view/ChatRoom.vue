@@ -11,6 +11,7 @@ import { listChatHistory } from '@/api/ChatPart';
 import { useUserStore } from '@/stores';
 import EmojiPicker from 'vue3-emoji-picker';
 import 'vue3-emoji-picker/css';
+import AvatarWithFallback from '@/components/AvatarWithFallback.vue';
 
 const userStore = useUserStore();
 const userId = computed(() => String(userStore.userID ?? ''));
@@ -124,8 +125,10 @@ const close = () => {
         :class="['message', msg.senderId === userId ? 'sent' : 'received']"
       >
         <!-- 头像 -->
-        <el-avatar
-        :src="msg.senderId === userId ? `/avatars/${userId}.png` : `/avatars/${msg.senderId}.png`"
+        <AvatarWithFallback
+          :user-id="msg.senderId"
+          :name="String(msg.senderId ?? '')"
+          :size="40"
           class="avatar"
         />
         <!-- 消息内容 -->
