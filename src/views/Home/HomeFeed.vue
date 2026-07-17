@@ -1,16 +1,16 @@
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElSkeleton, ElEmpty } from 'element-plus';
 import ArticleCard from '@/components/ArticleCard.vue';
 import { listArticles } from '@/api/CreatPart';
 import { throttle } from '@/composables/useDebounce';
 
-/**
- * 首页信息流(带 "推荐 / 最新" tab + 无限滚动)
- * 修复了旧版:
- *   - itemList 和 itemList1/2 引用错位
- *   - 切 tab 后 hasMore 不重置
- */
+const props = defineProps({
+  category: { type: String, default: 'all' },
+});
+
+const router = useRouter();
 
 const TABS = [
   { key: 'recommend', label: '推荐' },
@@ -19,7 +19,7 @@ const TABS = [
 
 const activeTab = ref('recommend');
 
-// 分 tab 各自的状态(缓存,tab 切换不重复请求)
+// 分 tab 状态,切分类时会 reset
 const state = ref({
   recommend: { items: [], page: 1, hasMore: true, loading: false },
   latest:    { items: [], page: 1, hasMore: true, loading: false },
@@ -29,14 +29,26 @@ function currentTabState() {
   return state.value[activeTab.value];
 }
 
+function resetAll() {
+  state.value = {
+    recommend: { items: [], page: 1, hasMore: true, loading: false },
+    latest:    { items: [], page: 1, hasMore: true, loading: false },
+  };
+}
+
 async function loadMore() {
   const s = currentTabState();
   if (s.loading || !s.hasMore) return;
   s.loading = true;
   try {
-    const data = await listArticles({ sort: activeTab.value, page: s.page, limit: 5 });
-    s.items.push(...data.items);
-    s.hasMore = data.hasMore;
+    const data = await listArticles({
+      sort: activeTab.value,
+      category: props.category,
+      page: s.page,
+      limit: 5,
+    });
+    s.items.push(...(data?.items || []));
+    s.hasMore = !!data?.hasMore;
     s.page += 1;
   } catch (err) {
     console.error('[HomeFeed] loadMore failed:', err);
@@ -48,9 +60,12 @@ async function loadMore() {
 async function pickTab(key) {
   if (key === activeTab.value) return;
   activeTab.value = key;
-  // 首次进入该 tab 时才加载
   const s = currentTabState();
   if (s.items.length === 0) await loadMore();
+}
+
+function goDetail(item) {
+  router.push(`/articles/${item.id}`);
 }
 
 // 滚动到底触底加载
@@ -61,8 +76,18 @@ const onScroll = throttle(() => {
   if (st + ch >= sh - 200) loadMore();
 }, 200);
 
+// 分类变化 → 重置并重新加载
+import { watch } from 'vue';
+watch(
+  () => props.category,
+  async () => {
+    resetAll();
+    await loadMore();
+  },
+);
+
 onMounted(async () => {
-  await loadMore(); // 首屏加载推荐
+  await loadMore();
   window.addEventListener('scroll', onScroll, { passive: true });
 });
 onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
@@ -87,11 +112,13 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
         v-for="item in currentTabState().items"
         :key="`${activeTab}-${item.id}`"
         :title="item.title"
-        :cont="item.cont"
-        :pic-url="item.picUrl"
-        :like="item.like"
-        :view="item.view"
-        :user="item.user"
+        :cont="item.excerpt"
+        :pic-url="item.cover_url"
+        :like="item.like_count"
+        :view="item.view_count"
+        :user="item.author_name"
+        :category="item.category_name"
+        @click="goDetail(item)"
       />
     </div>
 
@@ -111,7 +138,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
 
     <el-empty
       v-else-if="!currentTabState().loading && currentTabState().items.length === 0"
-      description="暂无内容"
+      description="该分类下暂无内容"
     />
   </section>
 </template>
@@ -141,13 +168,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
   cursor: pointer;
   transition: color 0.15s ease;
 }
-.tab:hover {
-  color: var(--color-primary);
-}
-.tab.active {
-  color: var(--color-primary);
-  font-weight: 600;
-}
+.tab:hover { color: var(--color-primary); }
+.tab.active { color: var(--color-primary); font-weight: 600; }
 .tab.active::after {
   content: '';
   position: absolute;
@@ -159,10 +181,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
   border-radius: 2px;
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
-}
+.list { display: flex; flex-direction: column; }
 
 .tip {
   text-align: center;

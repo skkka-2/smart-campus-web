@@ -9,6 +9,7 @@ const routes = [
     children: [
       { path: 'home', component: () => import('@/views/Home/index.vue') },
       { path: 'MainPart', redirect: '/home' }, // 兼容老链接
+      { path: 'articles/:id', component: () => import('@/views/ArticleDetail.vue') },
       { path: 'OnePart', component: () => import('@/view/OnePart.vue') },
       { path: 'TwoPart', component: () => import('@/view/TwoPart.vue') },
       { path: 'FourPart', component: () => import('@/view/FourPart.vue') },

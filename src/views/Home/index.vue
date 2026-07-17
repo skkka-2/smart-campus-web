@@ -1,18 +1,20 @@
 <script setup>
+import { ref } from 'vue';
 import HomeSidebar from './HomeSidebar.vue';
 import HomeFeed from './HomeFeed.vue';
 import HomeRankPanel from './HomeRankPanel.vue';
 
-function onCategoryChange(id) {
-  console.log('[Home] category:', id);
-  // Phase 3:接分类筛选
+const category = ref('all');
+
+function onCategoryChange(slug) {
+  category.value = slug;
 }
 </script>
 
 <template>
   <div class="home">
     <HomeSidebar class="col-side" @change="onCategoryChange" />
-    <HomeFeed class="col-feed" />
+    <HomeFeed class="col-feed" :category="category" />
     <HomeRankPanel class="col-rank" />
   </div>
 </template>

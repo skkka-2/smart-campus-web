@@ -1,22 +1,25 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { listCategories } from '@/api/CreatPart';
 
 const emit = defineEmits(['change']);
 
-const categories = [
-  { id: 'all',    label: '全部动态',  icon: '📰' },
-  { id: 'focus',  label: '关注',      icon: '⭐' },
-  { id: 'campus', label: '校招就业',  icon: '💼' },
-  { id: 'grad',   label: '考研考公',  icon: '📚' },
-  { id: 'cert',   label: '考级考证',  icon: '🎓' },
-  { id: 'match',  label: '学生竞赛',  icon: '🏆' },
-  { id: 'innov',  label: '创新创业',  icon: '🚀' },
-];
-
+const categories = ref([]);
 const selected = ref('all');
-function pick(id) {
-  selected.value = id;
-  emit('change', id);
+
+onMounted(async () => {
+  try {
+    const data = await listCategories();
+    categories.value = data?.items || [];
+  } catch (err) {
+    console.error('[HomeSidebar] load categories failed:', err);
+  }
+});
+
+function pick(slug) {
+  if (slug === selected.value) return;
+  selected.value = slug;
+  emit('change', slug);
 }
 </script>
 
@@ -27,11 +30,11 @@ function pick(id) {
         v-for="c in categories"
         :key="c.id"
         class="menu-item"
-        :class="{ active: selected === c.id }"
-        @click="pick(c.id)"
+        :class="{ active: selected === c.slug }"
+        @click="pick(c.slug)"
       >
         <span class="icon" aria-hidden="true">{{ c.icon }}</span>
-        <span class="label">{{ c.label }}</span>
+        <span class="label">{{ c.name }}</span>
       </li>
     </ul>
   </aside>
