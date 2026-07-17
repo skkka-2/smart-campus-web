@@ -11,7 +11,10 @@ const routes = [
       { path: 'MainPart', redirect: '/home' }, // 兼容老链接
       { path: 'articles/:id', component: () => import('@/views/ArticleDetail.vue') },
       { path: 'OnePart', component: () => import('@/view/OnePart.vue') },
-      { path: 'TwoPart', component: () => import('@/view/TwoPart.vue') },
+      { path: 'TwoPart', redirect: '/jobs' }, // 兼容老链接
+      { path: 'jobs', component: () => import('@/views/Jobs/index.vue') },
+      { path: 'jobs/:id', component: () => import('@/views/Jobs/JobDetail.vue') },
+      { path: 'profile', component: () => import('@/views/Profile/index.vue'), meta: { requiresAuth: true } },
       { path: 'FourPart', component: () => import('@/view/FourPart.vue') },
       {
         path: 'AiPart',

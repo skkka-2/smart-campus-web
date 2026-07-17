@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElDialog, ElButton } from 'element-plus';
+import { ElDialog, ElButton, ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus';
 import { useAuth } from '@/composables/useAuth';
 import SearchBar from './SearchBar.vue';
 import AvatarWithFallback from '@/components/AvatarWithFallback.vue';
@@ -32,6 +32,12 @@ function goCreate() {
 function goLogin() {
   router.push('/login');
 }
+function handleMenuCommand(cmd) {
+  if (cmd === 'profile') router.push('/profile');
+  else if (cmd === 'favorites') router.push('/profile?tab=favorites');
+  else if (cmd === 'applications') router.push('/profile?tab=applications');
+  else if (cmd === 'logout') showLogoutDialog.value = true;
+}
 async function confirmLogout() {
   showLogoutDialog.value = false;
   await logout({ redirect: '/home' });
@@ -55,7 +61,7 @@ function onSearch(item) {
         <router-link to="/OnePart" class="nav-item" :class="{ active: activePath === '/OnePart' }">
           升学速递
         </router-link>
-        <router-link to="/TwoPart" class="nav-item" :class="{ active: activePath === '/TwoPart' }">
+        <router-link to="/jobs" class="nav-item" :class="{ active: activePath.startsWith('/jobs') || activePath === '/TwoPart' }">
           实习就业
         </router-link>
         <a class="nav-item" href="https://cy.ncss.cn/" target="_blank" rel="noopener">创业立项</a>
@@ -70,9 +76,27 @@ function onSearch(item) {
         <button v-if="isLogin" class="btn-create" @click="goCreate">创作者中心</button>
 
         <template v-if="isLogin">
-          <div class="avatar-wrap" @click="showLogoutDialog = true">
-            <AvatarWithFallback :user-id="userID" :name="username" :size="36" />
-          </div>
+          <el-dropdown trigger="click" @command="handleMenuCommand">
+            <div class="avatar-wrap">
+              <AvatarWithFallback :user-id="userID" :name="username" :size="36" />
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">
+                  <span style="margin-right: 6px;">👤</span>我的主页
+                </el-dropdown-item>
+                <el-dropdown-item command="favorites">
+                  <span style="margin-right: 6px;">❤️</span>我的收藏
+                </el-dropdown-item>
+                <el-dropdown-item command="applications" divided>
+                  <span style="margin-right: 6px;">📄</span>投递记录
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" divided>
+                  <span style="margin-right: 6px;">👋</span>退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </template>
         <button v-else class="btn-login" @click="goLogin">登录</button>
       </div>

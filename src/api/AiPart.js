@@ -12,3 +12,7 @@ export const getChatHistory = () => request.get('/api/ai/history');
 
 /** 清空当前用户的对话 */
 export const clearChatHistory = () => request.delete('/api/ai/history');
+
+/** AI 简历适配度分析 */
+export const analyzeResume = ({ resume, jobTitle, jobDesc, jobRequirements } = {}) =>
+  request.post('/api/ai/resume-analysis', { resume, jobTitle, jobDesc, jobRequirements });
